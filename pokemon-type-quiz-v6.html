@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ポケモンタイプ診断</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap');
+
+:root {
+  --msg-bg: #f0ece0;
+  --msg-border: #2c1e10;
+  --msg-shadow: #8a6040;
+  --btn-bg: #3060b8;
+  --btn-dark: #1a3a80;
+  --accent: #c02000;
+  --text-dark: #180e04;
+  --text-mid: #3c2810;
+  --panel-bg: #e8e0cc;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  position: relative;
+  overflow-x: hidden;
+  background: #3a4a28;
+}
+
+/* ==============================
+   TOP-DOWN MAP BACKGROUND
+   ============================== */
+.map-bg {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.map-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* ==============================
+   MAIN FRAME
+   ============================== */
+.game-frame {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  max-width: 520px;
+}
+
+/* ==============================
+   TITLE SCREEN
+   ============================== */
+.title-screen { display:flex; flex-direction:column; align-items:center; }
+.title-screen.hidden { display:none; }
+
+.title-window {
+  width: 100%;
+  background: var(--msg-bg);
+  border: 4px solid var(--msg-border);
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 var(--msg-border);
+  overflow: hidden;
+}
+.title-header {
+  background: var(--msg-border);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.title-header-dots {
+  display: flex;
+  gap: 5px;
+}
+.title-header-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: #666;
+}
+.title-header-dot.red { background: #e04040; }
+.title-header-dot.yellow { background: #e0c040; }
+.title-header-dot.green { background: #40b040; }
+.title-header-txt {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #aaa;
+  letter-spacing: 1px;
+}
+
+.title-body {
+  padding: 22px 24px 20px;
+  text-align: center;
+}
+
+.pokeball-anim {
+  display: inline-block;
+  font-size: 44px;
+  margin-bottom: 12px;
+  animation: pSpin 4s linear infinite;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.3));
+}
+@keyframes pSpin {
+  0%   { transform: rotate(0deg) scale(1); }
+  45%  { transform: rotate(160deg) scale(1.1); }
+  50%  { transform: rotate(180deg) scale(1); }
+  95%  { transform: rotate(340deg) scale(1.1); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+.title-logo {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 16px;
+  color: var(--accent);
+  line-height: 1.9;
+  margin-bottom: 4px;
+  letter-spacing: 1px;
+}
+.title-logo-sub {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #888;
+  margin-bottom: 18px;
+  letter-spacing: 1px;
+}
+
+.title-msg {
+  background: var(--panel-bg);
+  border: 2px solid #b0a080;
+  border-radius: 4px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  line-height: 1.8;
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.start-btn {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 9px;
+  background: var(--btn-bg);
+  color: #fff;
+  border: 3px solid var(--btn-dark);
+  border-bottom: 5px solid var(--btn-dark);
+  border-right: 5px solid var(--btn-dark);
+  padding: 11px 26px;
+  cursor: pointer;
+  border-radius: 4px;
+  letter-spacing: 1px;
+  animation: blinkBtn 1.5s step-start infinite;
+  transition: background .1s;
+}
+.start-btn:hover { background: #2050a0; animation: none; }
+.start-btn:active { transform: translate(2px,2px); border-bottom-width: 3px; border-right-width: 3px; }
+@keyframes blinkBtn { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ==============================
+   QUIZ AREA
+   ============================== */
+.quiz-area { display:none; }
+.quiz-area.visible { display:block; }
+
+.question-window {
+  width: 100%;
+  background: var(--msg-bg);
+  border: 4px solid var(--msg-border);
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 var(--msg-border);
+  overflow: hidden;
+}
+
+.q-header {
+  background: var(--msg-border);
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.q-num {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #aaa;
+}
+.q-progress-outer {
+  width: 100px; height: 8px;
+  background: #1a1208;
+  border-radius: 3px;
+  overflow: hidden;
+  border: 1px solid #555;
+}
+.q-progress-inner {
+  height: 100%;
+  background: linear-gradient(90deg, #c0a000, #f8c800);
+  transition: width .4s ease;
+}
+
+.q-body {
+  padding: 14px 18px 10px;
+}
+.question-text {
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--text-dark);
+  line-height: 1.75;
+  min-height: 48px;
+}
+
+/* RPG choice menu */
+.choice-panel {
+  background: var(--panel-bg);
+  border-top: 3px solid #b0a080;
+}
+
+.choice-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  border: none;
+  border-bottom: 2px solid #c8b888;
+  background: transparent;
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-dark);
+  padding: 13px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: background .1s;
+  position: relative;
+}
+.choice-btn:last-child { border-bottom: none; }
+
+.choice-cursor {
+  font-size: 11px;
+  color: var(--accent);
+  transition: opacity .12s, transform .12s;
+  opacity: 0;
+  flex-shrink: 0;
+  width: 14px;
+}
+.choice-btn:hover .choice-cursor { opacity:1; transform: translateX(2px); }
+.choice-btn:hover { background: #fffaec; }
+.choice-btn:active { background: #ffe8a0; }
+
+/* ==============================
+   RESULT SCREEN
+   ============================== */
+.result-screen { display:none; }
+.result-screen.visible { display:block; }
+
+.result-window {
+  width: 100%;
+  background: var(--msg-bg);
+  border: 4px solid var(--msg-border);
+  border-radius: 6px;
+  box-shadow: 4px 4px 0 var(--msg-border);
+  overflow: hidden;
+}
+
+.result-header {
+  background: var(--msg-border);
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.result-header-txt {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 8px;
+  color: #c8a840;
+  letter-spacing: 3px;
+}
+
+.result-top {
+  padding: 20px 20px 14px;
+  text-align: center;
+  border-bottom: 3px solid #b0a080;
+}
+
+.result-icon {
+  font-size: 66px;
+  line-height: 1;
+  margin-bottom: 10px;
+  display: block;
+  filter: drop-shadow(0 3px 8px rgba(0,0,0,0.18));
+  animation: rPop .55s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes rPop { from{transform:scale(0) rotate(-15deg)} to{transform:scale(1) rotate(0)} }
+
+.result-badge {
+  display: inline-block;
+  padding: 7px 22px;
+  border-radius: 4px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  border: 3px solid rgba(0,0,0,0.22);
+  box-shadow: 3px 3px 0 rgba(0,0,0,0.2);
+  letter-spacing: 1px;
+  color: #fff;
+}
+
+.result-body {
+  padding: 14px 16px 16px;
+}
+
+.result-desc {
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.8;
+  color: var(--text-dark);
+  margin-bottom: 10px;
+}
+
+.info-panel {
+  background: var(--panel-bg);
+  border: 2px solid #b8a878;
+  border-radius: 4px;
+  padding: 9px 13px;
+  margin-bottom: 9px;
+}
+.info-panel-title {
+  font-family: 'Press Start 2P', monospace;
+  font-size: 7px;
+  color: #888;
+  margin-bottom: 7px;
+  letter-spacing: 1px;
+}
+.pokemon-names {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-mid);
+  line-height: 1.6;
+}
+.pokemon-names span { color: var(--btn-bg); }
+
+/* Compatibility */
+.compat-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+.compat-row:last-child { margin-bottom: 0; }
+.compat-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-mid);
+  min-width: 88px;
+  padding-top: 2px;
+  flex-shrink: 0;
+}
+.type-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-size: 10px;
+  font-weight: 800;
+  border: 1px solid rgba(0,0,0,0.18);
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  margin-bottom: 3px;
+}
+.type-chip.dt { color:#222; text-shadow:none; }
+
+/* Triangle display - SVG-based */
+.triangle-wrap {
+  margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #d0c8a8;
+}
+.triangle-wrap:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+
+.tri-svg-container {
+  width: 100%;
+  max-width: 260px;
+  margin: 0 auto;
+  display: block;
+}
+
+/* Back button */
+.back-btn-wrap {
+  padding: 6px 0 0;
+  border-top: 2px solid #c8b888;
+}
+.back-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-family: 'M PLUS Rounded 1c', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #7a6040;
+  padding: 8px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: background .1s, color .1s;
+  border-radius: 0 0 4px 4px;
+}
+.back-btn:hover { background: #fffaec; color: var(--accent); }
+.back-btn:disabled { opacity: .35; cursor: default; }
+.back-btn:disabled:hover { background: transparent; color: #7a6040; }
+.back-btn-icon { font-size: 12px; }
+
+/* Axis bars */
+.axis-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+.axis-lbl { font-size:10px; font-weight:700; color:var(--text-mid); width:48px; text-align:right; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.axis-lbl-r { font-size:10px; font-weight:700; color:var(--text-mid); width:48px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.axis-track {
+  flex:1;
+  height: 10px;
+  background: #d8d0b0;
+  border: 1px solid #b0a070;
+  border-radius: 5px;
+  position: relative;
+  overflow: hidden;
+}
+.axis-fill-pos {
+  position:absolute; top:0; bottom:0; right:50%;
+  background: linear-gradient(270deg, #3060b8, #60a0e8);
+  border-radius: 4px 0 0 4px;
+  transition: width .7s cubic-bezier(.34,1.56,.64,1);
+}
+.axis-fill-neg {
+  position:absolute; top:0; bottom:0; left:50%;
+  background: linear-gradient(90deg, #c02000, #e86030);
+  border-radius: 0 4px 4px 0;
+  transition: width .7s cubic-bezier(.34,1.56,.64,1);
+}
+.axis-mid {
+  position:absolute; top:0; bottom:0;
+  left:50%; transform:translateX(-50%);
+  width:2px; background:#888; z-index:2;
+}
+
+.retry-btn {
+  display:block; width:100%;
+  font-family:'Press Start 2P',monospace;
+  font-size:9px;
+  background: var(--btn-bg);
+  color: #fff;
+  border:3px solid var(--btn-dark);
+  border-bottom:5px solid var(--btn-dark);
+  border-right:5px solid var(--btn-dark);
+  padding:12px; cursor:pointer; border-radius:4px; letter-spacing:1px;
+  margin-top: 4px;
+}
+.retry-btn:hover { background:#2050a0; }
+.retry-btn:active { transform:translate(2px,2px); border-bottom-width:3px; border-right-width:3px; }
+
+/* ==============================
+   TYPE BADGE COLORS
+   ============================== */
+.tc-normal   { background:#9a9870; }
+.tc-fire     { background:#d06820; }
+.tc-water    { background:#4870e0; }
+.tc-electric { background:#c8a800; }
+.tc-grass    { background:#508838; }
+.tc-ice      { background:#5898a8; }
+.tc-fighting { background:#a02020; }
+.tc-poison   { background:#882888; }
+.tc-ground   { background:#b09048; }
+.tc-flying   { background:#7868c8; }
+.tc-psychic  { background:#c83870; }
+.tc-bug      { background:#789018; }
+.tc-rock     { background:#988828; }
+.tc-ghost    { background:#504878; }
+.tc-dragon   { background:#5018d8; }
+.tc-dark     { background:#484030; }
+.tc-steel    { background:#8888a0; }
+.tc-fairy    { background:#c87898; }
+</style>
+</head>
+<body>
+
+<!-- PIXEL ART MAP BACKGROUND -->
+<div class="map-bg">
+<svg class="map-svg" viewBox="0 0 800 600" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Pixel grass tile 8x8 -->
+    <pattern id="grass" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#387030"/>
+      <rect x="0" y="0" width="4" height="4" fill="#307028" opacity=".6"/>
+      <rect x="4" y="4" width="4" height="4" fill="#286820" opacity=".6"/>
+      <rect x="2" y="1" width="2" height="2" fill="#408038" opacity=".5"/>
+      <rect x="6" y="5" width="2" height="2" fill="#408038" opacity=".5"/>
+    </pattern>
+    <!-- Pixel path tile 8x8 -->
+    <pattern id="path" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#c8a850"/>
+      <rect x="0" y="0" width="4" height="4" fill="#b89840" opacity=".4"/>
+      <rect x="4" y="4" width="4" height="4" fill="#b89840" opacity=".4"/>
+      <rect x="3" y="3" width="2" height="2" fill="#d8b860" opacity=".3"/>
+    </pattern>
+    <!-- Pixel water tile 8x8 -->
+    <pattern id="water" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#2858b0"/>
+      <rect x="0" y="0" width="4" height="2" fill="#4878c8" opacity=".7"/>
+      <rect x="4" y="4" width="4" height="2" fill="#4878c8" opacity=".7"/>
+      <rect x="0" y="4" width="2" height="2" fill="#183888" opacity=".5"/>
+      <rect x="4" y="0" width="2" height="2" fill="#183888" opacity=".5"/>
+    </pattern>
+    <!-- Pixel tall-grass tile 8x8 -->
+    <pattern id="tallgrass" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#286820"/>
+      <rect x="2" y="0" width="2" height="5" fill="#50a038"/>
+      <rect x="6" y="2" width="2" height="4" fill="#50a038"/>
+      <rect x="0" y="3" width="2" height="3" fill="#60b048" opacity=".8"/>
+      <rect x="4" y="1" width="2" height="4" fill="#60b048" opacity=".6"/>
+    </pattern>
+    <!-- Pixel sand tile 8x8 -->
+    <pattern id="sand" x="0" y="0" width="8" height="8" patternUnits="userSpaceOnUse">
+      <rect width="8" height="8" fill="#c8a848"/>
+      <rect x="0" y="0" width="2" height="2" fill="#b09038" opacity=".5"/>
+      <rect x="4" y="4" width="2" height="2" fill="#b09038" opacity=".5"/>
+      <rect x="6" y="2" width="2" height="2" fill="#d8b858" opacity=".4"/>
+    </pattern>
+  </defs>
+
+  <!-- BASE GRASS -->
+  <rect width="800" height="600" fill="url(#grass)"/>
+
+  <!-- WATER (pixel-rectangle blocks) -->
+  <rect x="32"  y="32"  width="168" height="104" fill="url(#water)"/>
+  <rect x="40"  y="24"  width="152" height="8"   fill="url(#water)"/>
+  <rect x="24"  y="40"  width="8"   height="88"  fill="url(#water)"/>
+  <rect x="200" y="40"  width="8"   height="80"  fill="url(#water)"/>
+  <rect x="40"  y="136" width="160" height="8"   fill="url(#sand)"/>
+  <rect x="48"  y="144" width="48"  height="24"  fill="url(#water)"/>
+  <rect x="40"  y="168" width="56"  height="24"  fill="url(#water)"/>
+  <rect x="48"  y="192" width="48"  height="24"  fill="url(#water)"/>
+  <rect x="32"  y="216" width="56"  height="32"  fill="url(#water)"/>
+  <rect x="48"  y="248" width="48"  height="24"  fill="url(#water)"/>
+  <rect x="584" y="432" width="192" height="120" fill="url(#water)"/>
+  <rect x="584" y="424" width="184" height="8"   fill="url(#sand)"/>
+  <rect x="368" y="256" width="72"  height="48"  fill="url(#water)"/>
+  <rect x="360" y="264" width="8"   height="32"  fill="url(#water)"/>
+  <rect x="440" y="264" width="8"   height="32"  fill="url(#water)"/>
+  <rect x="368" y="248" width="72"  height="8"   fill="url(#sand)"/>
+  <rect x="368" y="304" width="72"  height="8"   fill="url(#sand)"/>
+
+  <!-- PATHS (8px-snapped) -->
+  <rect x="0"   y="272" width="800" height="24"  fill="url(#path)"/>
+  <rect x="0"   y="272" width="800" height="2"   fill="#806820"/>
+  <rect x="0"   y="294" width="800" height="2"   fill="#806820"/>
+  <rect x="388" y="0"   width="24"  height="600" fill="url(#path)"/>
+  <rect x="388" y="0"   width="2"   height="600" fill="#806820"/>
+  <rect x="410" y="0"   width="2"   height="600" fill="#806820"/>
+  <rect x="112" y="144" width="276" height="16"  fill="url(#path)"/>
+  <rect x="112" y="144" width="276" height="2"   fill="#806820"/>
+  <rect x="112" y="158" width="276" height="2"   fill="#806820"/>
+  <rect x="412" y="416" width="388" height="16"  fill="url(#path)"/>
+  <rect x="412" y="416" width="388" height="2"   fill="#806820"/>
+  <rect x="412" y="430" width="388" height="2"   fill="#806820"/>
+  <rect x="192" y="152" width="16"  height="122" fill="url(#path)"/>
+  <rect x="192" y="152" width="2"   height="122" fill="#806820"/>
+  <rect x="206" y="152" width="2"   height="122" fill="#806820"/>
+  <rect x="552" y="272" width="16"  height="160" fill="url(#path)"/>
+  <rect x="552" y="272" width="2"   height="160" fill="#806820"/>
+  <rect x="566" y="272" width="2"   height="160" fill="#806820"/>
+
+  <!-- PIXEL BUILDINGS -->
+  <!-- Pokemon Center -->
+  <g transform="translate(224,56)">
+    <rect x="0"  y="16" width="72" height="48" fill="#e8d8b0" stroke="#6a5030" stroke-width="2"/>
+    <rect x="8"  y="8"  width="56" height="12" fill="#c82828"/>
+    <rect x="4"  y="12" width="64" height="8"  fill="#d03030"/>
+    <rect x="0"  y="16" width="72" height="4"  fill="#e03838"/>
+    <rect x="6"  y="22" width="16" height="12" fill="#80c8e0" stroke="#306878" stroke-width="2"/>
+    <rect x="50" y="22" width="16" height="12" fill="#80c8e0" stroke="#306878" stroke-width="2"/>
+    <rect x="28" y="38" width="16" height="18" fill="#703020" stroke="#501010" stroke-width="2"/>
+    <rect x="28" y="6"  width="16" height="8"  fill="#fff" stroke="#333" stroke-width="1"/>
+    <rect x="28" y="6"  width="16" height="4"  fill="#c82828"/>
+    <rect x="34" y="4"  width="4"  height="10" fill="#333"/>
+    <rect x="34" y="7"  width="4"  height="4"  fill="#fff"/>
+  </g>
+  <!-- Poke Mart -->
+  <g transform="translate(520,40)">
+    <rect x="0"  y="16" width="64" height="48" fill="#c8e0f8" stroke="#304878" stroke-width="2"/>
+    <rect x="0"  y="8"  width="64" height="12" fill="#3060c0"/>
+    <rect x="0"  y="16" width="64" height="4"  fill="#4070d0"/>
+    <rect x="6"  y="22" width="14" height="12" fill="#a0d0f0" stroke="#306090" stroke-width="2"/>
+    <rect x="44" y="22" width="14" height="12" fill="#a0d0f0" stroke="#306090" stroke-width="2"/>
+    <rect x="22" y="38" width="20" height="18" fill="#204090" stroke="#102070" stroke-width="2"/>
+    <rect x="26" y="12" width="2"  height="6"  fill="#fff"/>
+    <rect x="28" y="14" width="2"  height="2"  fill="#fff"/>
+    <rect x="30" y="12" width="2"  height="6"  fill="#fff"/>
+    <rect x="34" y="12" width="2"  height="6"  fill="#fff"/>
+    <rect x="36" y="14" width="2"  height="2"  fill="#fff"/>
+    <rect x="38" y="12" width="2"  height="6"  fill="#fff"/>
+  </g>
+  <!-- Gym -->
+  <g transform="translate(608,144)">
+    <rect x="0"  y="16" width="80" height="56" fill="#d8d0a0" stroke="#484018" stroke-width="2"/>
+    <rect x="0"  y="8"  width="80" height="12" fill="#787830"/>
+    <rect x="0"  y="16" width="80" height="4"  fill="#888840"/>
+    <rect x="8"  y="24" width="16" height="14" fill="#b0d890" stroke="#507030" stroke-width="2"/>
+    <rect x="56" y="24" width="16" height="14" fill="#b0d890" stroke="#507030" stroke-width="2"/>
+    <rect x="28" y="44" width="24" height="20" fill="#383808" stroke="#202000" stroke-width="2"/>
+    <rect x="10" y="11" width="2"  height="6"  fill="#fff"/>
+    <rect x="12" y="11" width="4"  height="2"  fill="#fff"/>
+    <rect x="12" y="14" width="2"  height="2"  fill="#fff"/>
+    <rect x="12" y="15" width="4"  height="2"  fill="#fff"/>
+    <rect x="18" y="11" width="2"  height="6"  fill="#fff"/>
+    <rect x="22" y="11" width="6"  height="6"  fill="none" stroke="#fff" stroke-width="2"/>
+    <rect x="28" y="11" width="2"  height="6"  fill="#fff"/>
+    <rect x="30" y="14" width="4"  height="2"  fill="#fff"/>
+    <rect x="34" y="11" width="2"  height="6"  fill="#fff"/>
+  </g>
+  <!-- Houses bottom-left -->
+  <g transform="translate(48,376)">
+    <rect x="0"  y="8"  width="48" height="40" fill="#e8d098" stroke="#806040" stroke-width="2"/>
+    <rect x="0"  y="0"  width="48" height="12" fill="#b04040" stroke="#801818" stroke-width="2"/>
+    <rect x="8"  y="14" width="12" height="10" fill="#90c8e0" stroke="#407890" stroke-width="2"/>
+    <rect x="16" y="28" width="12" height="16" fill="#804030" stroke="#603018" stroke-width="2"/>
+    <rect x="32" y="14" width="10" height="10" fill="#90c8e0" stroke="#407890" stroke-width="2"/>
+    <rect x="56" y="8"  width="48" height="40" fill="#e0c888" stroke="#806040" stroke-width="2"/>
+    <rect x="56" y="0"  width="48" height="12" fill="#a84848" stroke="#801818" stroke-width="2"/>
+    <rect x="64" y="14" width="12" height="10" fill="#90c8e0" stroke="#407890" stroke-width="2"/>
+    <rect x="72" y="28" width="12" height="16" fill="#804030" stroke="#603018" stroke-width="2"/>
+    <rect x="88" y="14" width="10" height="10" fill="#90c8e0" stroke="#407890" stroke-width="2"/>
+  </g>
+  <!-- Houses center-right -->
+  <g transform="translate(480,152)">
+    <rect x="0"  y="8"  width="48" height="40" fill="#f0d8a8" stroke="#806040" stroke-width="2"/>
+    <rect x="0"  y="0"  width="48" height="12" fill="#b05050" stroke="#801818" stroke-width="2"/>
+    <rect x="8"  y="14" width="12" height="10" fill="#90c8e0" stroke="#407890" stroke-width="2"/>
+    <rect x="16" y="28" width="12" height="16" fill="#804030" stroke="#603018" stroke-width="2"/>
+    <rect x="32" y="14" width="10" height="10" fill="#90c8e0" stroke="#407890" stroke-width="2"/>
+    <rect x="56" y="16" width="48" height="40" fill="#e8c898" stroke="#806040" stroke-width="2"/>
+    <rect x="56" y="8"  width="48" height="12" fill="#a84040" stroke="#801818" stroke-width="2"/>
+    <rect x="64" y="22" width="12" height="10" fill="#90c8e0" stroke="#407890" stroke-width="2"/>
+    <rect x="72" y="36" width="12" height="16" fill="#804030" stroke="#603018" stroke-width="2"/>
+  </g>
+
+  <!-- TALL GRASS (pixel) -->
+  <rect x="160" y="184" width="32" height="88" fill="url(#tallgrass)" stroke="#286020" stroke-width="2"/>
+  <rect x="164" y="188" width="4"  height="12" fill="#60b840"/>
+  <rect x="172" y="186" width="4"  height="14" fill="#58b038"/>
+  <rect x="180" y="188" width="4"  height="12" fill="#68c048"/>
+  <rect x="164" y="216" width="4"  height="12" fill="#60b840"/>
+  <rect x="172" y="220" width="4"  height="10" fill="#58b038"/>
+  <rect x="164" y="244" width="4"  height="12" fill="#60b840"/>
+  <rect x="440" y="312" width="112" height="96" fill="url(#tallgrass)" stroke="#286020" stroke-width="2"/>
+  <rect x="448" y="316" width="4"  height="14" fill="#60b840"/>
+  <rect x="456" y="314" width="4"  height="16" fill="#58b038"/>
+  <rect x="464" y="316" width="4"  height="14" fill="#68c048"/>
+  <rect x="472" y="318" width="4"  height="12" fill="#60b840"/>
+  <rect x="480" y="314" width="4"  height="16" fill="#58b038"/>
+  <rect x="488" y="316" width="4"  height="14" fill="#68c048"/>
+  <rect x="496" y="318" width="4"  height="12" fill="#60b840"/>
+  <rect x="504" y="316" width="4"  height="14" fill="#58b038"/>
+  <rect x="448" y="344" width="4"  height="12" fill="#60b840"/>
+  <rect x="456" y="346" width="4"  height="14" fill="#58b038"/>
+  <rect x="464" y="344" width="4"  height="12" fill="#68c048"/>
+  <rect x="472" y="342" width="4"  height="14" fill="#60b840"/>
+  <rect x="480" y="344" width="4"  height="12" fill="#58b038"/>
+  <rect x="632" y="216" width="64" height="56" fill="url(#tallgrass)" stroke="#286020" stroke-width="2"/>
+  <rect x="636" y="220" width="4"  height="12" fill="#60b840"/>
+  <rect x="644" y="218" width="4"  height="14" fill="#58b038"/>
+  <rect x="652" y="220" width="4"  height="12" fill="#68c048"/>
+  <rect x="660" y="218" width="4"  height="14" fill="#60b840"/>
+  <rect x="668" y="220" width="4"  height="12" fill="#58b038"/>
+
+  <!-- PIXEL TREES (square blocks, no rounded corners) -->
+  <rect x="40"  y="24"  width="24" height="24" fill="#1a5010"/>
+  <rect x="40"  y="24"  width="20" height="20" fill="#2a7020"/>
+  <rect x="64"  y="16"  width="24" height="24" fill="#1a5010"/>
+  <rect x="64"  y="16"  width="20" height="20" fill="#2a7020"/>
+  <rect x="40"  y="48"  width="24" height="24" fill="#1a5010"/>
+  <rect x="40"  y="48"  width="20" height="20" fill="#2a7020"/>
+  <rect x="64"  y="40"  width="24" height="24" fill="#1a5010"/>
+  <rect x="64"  y="40"  width="20" height="20" fill="#2a7020"/>
+  <rect x="736" y="32"  width="24" height="24" fill="#1a5010"/>
+  <rect x="736" y="32"  width="20" height="20" fill="#2a7020"/>
+  <rect x="760" y="24"  width="24" height="24" fill="#1a5010"/>
+  <rect x="760" y="24"  width="20" height="20" fill="#2a7020"/>
+  <rect x="736" y="56"  width="24" height="24" fill="#1a5010"/>
+  <rect x="736" y="56"  width="20" height="20" fill="#2a7020"/>
+  <rect x="760" y="64"  width="24" height="24" fill="#1a5010"/>
+  <rect x="760" y="64"  width="20" height="20" fill="#2a7020"/>
+  <rect x="736" y="88"  width="24" height="24" fill="#1a5010"/>
+  <rect x="736" y="88"  width="20" height="20" fill="#2a7020"/>
+  <rect x="760" y="96"  width="24" height="24" fill="#1a5010"/>
+  <rect x="760" y="96"  width="20" height="20" fill="#2a7020"/>
+  <rect x="736" y="120" width="24" height="24" fill="#1a5010"/>
+  <rect x="736" y="120" width="20" height="20" fill="#2a7020"/>
+  <rect x="760" y="128" width="24" height="24" fill="#1a5010"/>
+  <rect x="760" y="128" width="20" height="20" fill="#2a7020"/>
+  <rect x="736" y="152" width="24" height="24" fill="#1a5010"/>
+  <rect x="736" y="152" width="20" height="20" fill="#2a7020"/>
+  <rect x="760" y="160" width="24" height="24" fill="#1a5010"/>
+  <rect x="760" y="160" width="20" height="20" fill="#2a7020"/>
+  <rect x="736" y="184" width="24" height="24" fill="#1a5010"/>
+  <rect x="736" y="184" width="20" height="20" fill="#2a7020"/>
+  <rect x="760" y="192" width="24" height="24" fill="#1a5010"/>
+  <rect x="760" y="192" width="20" height="20" fill="#2a7020"/>
+  <rect x="736" y="216" width="24" height="24" fill="#1a5010"/>
+  <rect x="736" y="216" width="20" height="20" fill="#2a7020"/>
+  <rect x="24"  y="544" width="24" height="24" fill="#1a5010"/>
+  <rect x="24"  y="544" width="20" height="20" fill="#2a7020"/>
+  <rect x="48"  y="536" width="24" height="24" fill="#1a5010"/>
+  <rect x="48"  y="536" width="20" height="20" fill="#2a7020"/>
+  <rect x="72"  y="544" width="24" height="24" fill="#1a5010"/>
+  <rect x="72"  y="544" width="20" height="20" fill="#2a7020"/>
+  <rect x="96"  y="536" width="24" height="24" fill="#1a5010"/>
+  <rect x="96"  y="536" width="20" height="20" fill="#2a7020"/>
+  <rect x="120" y="544" width="24" height="24" fill="#1a5010"/>
+  <rect x="120" y="544" width="20" height="20" fill="#2a7020"/>
+  <rect x="144" y="536" width="24" height="24" fill="#1a5010"/>
+  <rect x="144" y="536" width="20" height="20" fill="#2a7020"/>
+  <rect x="536" y="544" width="24" height="24" fill="#1a5010"/>
+  <rect x="536" y="544" width="20" height="20" fill="#2a7020"/>
+  <rect x="560" y="536" width="24" height="24" fill="#1a5010"/>
+  <rect x="560" y="536" width="20" height="20" fill="#2a7020"/>
+  <rect x="280" y="48"  width="24" height="24" fill="#1a5010"/>
+  <rect x="280" y="48"  width="20" height="20" fill="#2a7020"/>
+  <rect x="312" y="40"  width="24" height="24" fill="#1a5010"/>
+  <rect x="312" y="40"  width="20" height="20" fill="#2a7020"/>
+  <rect x="336" y="56"  width="24" height="24" fill="#1a5010"/>
+  <rect x="336" y="56"  width="20" height="20" fill="#2a7020"/>
+  <rect x="144" y="336" width="24" height="24" fill="#1a5010"/>
+  <rect x="144" y="336" width="20" height="20" fill="#2a7020"/>
+  <rect x="168" y="352" width="24" height="24" fill="#1a5010"/>
+  <rect x="168" y="352" width="20" height="20" fill="#2a7020"/>
+
+  <!-- CROSSROAD SIGNS -->
+  <rect x="383" y="266" width="6" height="6" fill="#c8a020" stroke="#806020" stroke-width="1"/>
+  <rect x="411" y="266" width="6" height="6" fill="#c8a020" stroke="#806020" stroke-width="1"/>
+  <rect x="383" y="290" width="6" height="6" fill="#c8a020" stroke="#806020" stroke-width="1"/>
+  <rect x="411" y="290" width="6" height="6" fill="#c8a020" stroke="#806020" stroke-width="1"/>
+
+  <!-- PIXEL TRAINER SPRITE -->
+  <rect x="394" y="258" width="12" height="4"  fill="#d02010"/>
+  <rect x="396" y="254" width="8"  height="6"  fill="#d02010"/>
+  <rect x="396" y="262" width="8"  height="8"  fill="#f8d090"/>
+  <rect x="398" y="264" width="2"  height="2"  fill="#201808"/>
+  <rect x="402" y="264" width="2"  height="2"  fill="#201808"/>
+  <rect x="395" y="270" width="10" height="8"  fill="#2848a8"/>
+  <rect x="395" y="278" width="4"  height="6"  fill="#1830a0"/>
+  <rect x="401" y="278" width="4"  height="6"  fill="#1830a0"/>
+  <rect x="394" y="284" width="5"  height="2"  fill="#181808"/>
+  <rect x="401" y="284" width="5"  height="2"  fill="#181808"/>
+
+</svg>
+</div>
+
+<!-- =====================
+     GAME FRAME
+     ===================== -->
+<div class="game-frame">
+
+  <!-- TITLE -->
+  <div class="title-screen" id="titleScreen">
+    <div class="title-window">
+      <div class="title-header">
+        <div class="title-header-dots">
+          <div class="title-header-dot red"></div>
+          <div class="title-header-dot yellow"></div>
+          <div class="title-header-dot green"></div>
+        </div>
+        <div class="title-header-txt">POKEMON TYPE QUIZ</div>
+        <div style="width:48px"></div>
+      </div>
+      <div class="title-body">
+        <span class="pokeball-anim">⚪</span>
+        <div class="title-logo">ポケモン<br>タイプ診断</div>
+        <div class="title-logo-sub">あなたはどのタイプ？</div>
+        <div class="title-msg">
+          18種類のポケモンタイプの中から<br>
+          あなたにぴったりのタイプを<br>
+          診断してあげよう！<br>
+          全部で18問あるよ。
+        </div>
+        <button class="start-btn" onclick="startQuiz()">▶ はじめる！</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QUIZ -->
+  <div class="quiz-area" id="quizArea">
+    <div class="question-window">
+      <div class="q-header">
+        <div class="q-num" id="questionNum">しつもん 1/18</div>
+        <div class="q-progress-outer">
+          <div class="q-progress-inner" id="progressBar" style="width:0%"></div>
+        </div>
+      </div>
+      <div class="q-body">
+        <div class="question-text" id="questionText"></div>
+      </div>
+      <div class="choice-panel" id="choicePanel"></div>
+      <div class="back-btn-wrap">
+        <button class="back-btn" id="backBtn" onclick="goBack()" disabled>
+          <span class="back-btn-icon">◀</span>1つ前にもどる
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- RESULT -->
+  <div class="result-screen" id="resultScreen">
+    <div class="result-window">
+      <div class="result-header">
+        <div class="result-header-txt">★ しんだんけっか ★</div>
+      </div>
+      <div class="result-top">
+        <span class="result-icon" id="resultIcon"></span>
+        <div class="result-badge" id="resultBadge"></div>
+      </div>
+      <div class="result-body">
+        <div class="result-desc" id="resultDesc"></div>
+        <div class="info-panel">
+          <div class="info-panel-title">だいひょうポケモン</div>
+          <div class="pokemon-names" id="resultPokemon"></div>
+        </div>
+        <div class="info-panel" id="compatBox"></div>
+        <div class="info-panel">
+          <div class="info-panel-title">あなたのパラメーター</div>
+          <div id="axesTable"></div>
+        </div>
+        <div class="info-panel" id="triangleBox"></div>
+        <button class="retry-btn" onclick="resetQuiz()">▶ もういちどやる</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const AXIS = { EXT:0, LOG:1, REA:2, ATK:3, ORD:4, STA:5 };
+
+const questions = [
+  // 外向的(+) ↔ 内向的(-) × 3問
+  { text:"ポケモンセンターで見知らぬトレーナーに会った。あなたはどうする？",
+    axis:AXIS.EXT, choiceA:"話しかけて友だちになる！バトルしようぜ！", choiceB:"目が合わないようにそっと通り過ぎる" },
+  { text:"長い旅のあと、エネルギーを取り戻すのはどっちが得意？",
+    axis:AXIS.EXT, choiceA:"仲間やライバルと賑やかに過ごす", choiceB:"ひとりで静かに休む" },
+  { text:"街のお祭りで知らない人たちと踊るイベントがあった。",
+    axis:AXIS.EXT, choiceA:"輪の中心で盛り上がる！", choiceB:"遠くから楽しそうに眺める" },
+
+  // 論理的(+) ↔ 感情的(-) × 3問
+  { text:"バトルで相手の手持ちを分析するとき、あなたは？",
+    axis:AXIS.LOG, choiceA:"タイプ相性や素早さを計算して最善手を選ぶ", choiceB:"ポケモンとの絆を信じて直感で動く" },
+  { text:"仲間のトレーナーが大切なポケモンを失って落ち込んでいる。",
+    axis:AXIS.LOG, choiceA:"次に活かせるデータとアドバイスを伝える", choiceB:"黙って隣に座って一緒に泣く" },
+  { text:"新しいポケモンをどう評価する？",
+    axis:AXIS.LOG, choiceA:"種族値・技・特性を調べてから決める", choiceB:"見た目や雰囲気で「好き！」と感じたら即決める" },
+
+  // 現実的(+) ↔ 直感的(-) × 3問
+  { text:"旅の計画を立てるとき、あなたはどっちに近い？",
+    axis:AXIS.REA, choiceA:"ルートマップ・野宿場所・道具の数まで完璧に準備する", choiceB:"とりあえず出発して、なんとかなる！" },
+  { text:"伝説のポケモンの目撃情報を聞いた。信じる？",
+    axis:AXIS.REA, choiceA:"証拠や実績がなければ信じない", choiceB:"絶対いる！すぐ探しに行く！" },
+  { text:"冒険中にいきなり道が2つに分かれた。どうする？",
+    axis:AXIS.REA, choiceA:"地図を確認して安全なルートを選ぶ", choiceB:"なんとなく気になるほうに進む" },
+
+  // 攻撃的(+) ↔ 防御的(-) × 3問
+  { text:"ジムリーダーとのバトル、あなたの戦法は？",
+    axis:AXIS.ATK, choiceA:"先手をとって一気に畳み掛ける！", choiceB:"相手の動きを見て守りを固めてから反撃する" },
+  { text:"野生のポケモンと鉢合わせ。何もしなければ逃げそうにない。",
+    axis:AXIS.ATK, choiceA:"自分から仕掛けて捕まえる", choiceB:"相手が落ち着くまで距離をとって待つ" },
+  { text:"勝負で一番大事だと思うのは？",
+    axis:AXIS.ATK, choiceA:"相手より先に大ダメージを与えること", choiceB:"どんな攻撃を受けても耐えきれる耐久力" },
+
+  // 秩序(+) ↔ 自由(-) × 3問
+  { text:"ポケモンリーグのルールについて思うことは？",
+    axis:AXIS.ORD, choiceA:"ルールがあるから公平なバトルができる。守るのは当然だ", choiceB:"ルールより自分の信念を優先することもある" },
+  { text:"冒険の途中でジムバッジ集め以外の寄り道が出てきた。",
+    axis:AXIS.ORD, choiceA:"まず目標のジムに向かう。寄り道は後回し", choiceB:"面白そうなら予定を変えて寄り道する" },
+  { text:"旅のスタイルはどっちに近い？",
+    axis:AXIS.ORD, choiceA:"決めたルートをきっちりこなしていく", choiceB:"その日の気分で行き先を変える" },
+
+  // 安定(+) ↔ 変化(-) × 3問
+  { text:"手持ちに長年一緒に戦ったポケモンがいる。新しい強いポケモンを入れるなら？",
+    axis:AXIS.STA, choiceA:"変えない。信頼できる仲間との絆が一番大事", choiceB:"どんどん入れ替えて最強のパーティを作る" },
+  { text:"毎日同じルートで同じジムのトレーナーと練習するのは？",
+    axis:AXIS.STA, choiceA:"安定した練習こそ実力につながる", choiceB:"飽きる。常に新しい刺激が欲しい" },
+  { text:"はじめてのポケモンを選ぶとき、あなたは？",
+    axis:AXIS.STA, choiceA:"定番の強いポケモンを選ぶ", choiceB:"珍しいポケモンや変わり種を選ぶ" },
+];
+
+// V7 balanced weights (ratio ~2.79)
+// EXT:0 LOG:1 REA:2 ATK:3 ORD:4 STA:5
+const types = [
+  { name:"ノーマル",  cls:"tc-normal",   icon:"⭐", dt:false,
+    weights:[[0,+1,3],[2,+1,2],[1,+1,1]],
+    desc:"バランス感覚に優れた、信頼と安定のタイプ。派手さはないけれど、どんな場面でも着実に力を発揮できる。あなたの芯の強さは誰よりも本物です。",
+    pokemon:"カビゴン、ミルタンク、ケッキング" },
+  { name:"ほのお",   cls:"tc-fire",     icon:"🔥", dt:false,
+    weights:[[1,-1,3],[0,+1,2],[3,+1,1]],
+    desc:"熱い心と止まらない情熱を持つタイプ。感情を全力でぶつけ、周りを巻き込んで前に進む。あなたの炎は仲間を照らし、道を切り開く力があります。",
+    pokemon:"リザードン、エンテイ、ガオガエン" },
+  { name:"みず",     cls:"tc-water",    icon:"💧", dt:false,
+    weights:[[5,-1,3],[4,-1,2],[2,-1,1]],
+    desc:"変化に柔軟で、どんな形にも適応できる自由なタイプ。流れに乗りながら直感を武器にする。あなたはどんな環境でも自分らしさを保てる強さを持っています。",
+    pokemon:"カメックス、ミロカロス、スイクン" },
+  { name:"でんき",   cls:"tc-electric", icon:"⚡", dt:true,
+    weights:[[0,+1,3],[2,-1,2],[1,+1,1]],
+    desc:"素早い思考と行動力で周囲を驚かせるタイプ。論理と直感を使い分け、常に新しい発想を生み出す。あなたのひらめきは周りに刺激を与え続けます。",
+    pokemon:"ピカチュウ、ライコウ、エレキブル" },
+  { name:"くさ",     cls:"tc-grass",    icon:"🌿", dt:false,
+    weights:[[2,+1,3],[4,+1,2],[0,-1,1]],
+    desc:"大地にしっかり根を張り、コツコツと育てることが得意なタイプ。現実を見据えつつ、秩序の中で着実に成長する。あなたの粘り強さは誰にも負けません。",
+    pokemon:"フシギバナ、メガニウム、リーフィア" },
+  { name:"こおり",   cls:"tc-ice",      icon:"❄️", dt:false,
+    weights:[[0,-1,3],[3,-1,2],[4,+1,1]],
+    desc:"冷静で観察力に優れた、静寂の中に強さを持つタイプ。一人の時間を大切にしながら、守りの戦略で着実に相手を追い詰める。あなたの静けさは最大の武器です。",
+    pokemon:"ラプラス、フリーザー、グレイシア" },
+  { name:"かくとう", cls:"tc-fighting",  icon:"🥊", dt:false,
+    weights:[[3,+1,3],[4,+1,2],[0,+1,1]],
+    desc:"正義を貫き、真っ向から挑むタイプ。ルールの中で全力を尽くし、仲間と共に勝利を目指す。あなたの真剣さとリーダーシップは周りを鼓舞します。",
+    pokemon:"ルカリオ、マッシブーン、コジョンド" },
+  { name:"どく",     cls:"tc-poison",   icon:"☠️", dt:false,
+    weights:[[3,+1,3],[0,-1,2],[5,+1,1]],
+    desc:"独自の戦略と持久力で相手を崩すタイプ。表には出ないが、確実に結果を出す粘り強さがある。あなたの独自路線は周りには理解されにくくても、必ず活きる。",
+    pokemon:"ニドキング、ドクロッグ、クロバット" },
+  { name:"じめん",   cls:"tc-ground",   icon:"🌍", dt:true,
+    weights:[[5,+1,3],[3,-1,2],[2,+1,1]],
+    desc:"どっしりと構えて揺れない、大地のような安定感を持つタイプ。じっくり守りながら、現実的な目線でチャンスを確実に掴む。あなたは頼られる存在です。",
+    pokemon:"サンドパン、ドンファン、ガブリアス" },
+  { name:"ひこう",   cls:"tc-flying",   icon:"🕊️", dt:false,
+    weights:[[4,-1,3],[0,+1,2],[2,-1,1]],
+    desc:"自由を愛し、広い視野で世界を見渡すタイプ。ルールに縛られず、直感と好奇心で風のように飛び回る。あなたの発想は誰も予想できない場所へ向かいます。",
+    pokemon:"ファイヤー、ボルトロス、ピジョット" },
+  { name:"エスパー", cls:"tc-psychic",  icon:"🔮", dt:false,
+    weights:[[2,-1,3],[1,-1,2],[5,-1,1]],
+    desc:"深い感受性と直感で物事の本質を見抜くタイプ。感情と想像力を武器にして、誰も気づかない真実へたどり着く。あなたの洞察力は特別な輝きを持っています。",
+    pokemon:"ミュウツー、フーディン、ラルトス" },
+  { name:"むし",     cls:"tc-bug",      icon:"🪲", dt:false,
+    weights:[[2,+1,3],[4,-1,2],[5,+1,1]],
+    desc:"自分のペースで確実に成長し、自由な発想で道を切り開くタイプ。地道な観察と好奇心があなたの強み。あなたはどんな小さなことも見逃さない。",
+    pokemon:"ハッサム、アゲハント、ヘラクロス" },
+  { name:"いわ",     cls:"tc-rock",     icon:"🪨", dt:false,
+    weights:[[5,+1,3],[1,+1,2],[3,-1,1]],
+    desc:"硬く動じない意志と、冷静な論理で守り続けるタイプ。感情に流されず、着実に壁を守り抜く。あなたの不動の強さは、仲間の盾となります。",
+    pokemon:"イワーク、バンギラス、カブト" },
+  { name:"ゴースト", cls:"tc-ghost",    icon:"👻", dt:false,
+    weights:[[0,-1,3],[5,-1,2],[1,-1,1]],
+    desc:"謎めいた存在感と豊かな内面世界を持つタイプ。一人の時間を好み、常識を超えた感情と直感で独自の道を行く。あなたには人を引き寄せる不思議な魅力がある。",
+    pokemon:"ゲンガー、ミカルゲ、ムウマージ" },
+  { name:"ドラゴン", cls:"tc-dragon",   icon:"🐉", dt:false,
+    weights:[[5,-1,3],[3,+1,2],[0,+1,1]],
+    desc:"変化を恐れず全力で挑む、圧倒的な力と存在感を持つタイプ。安定より進化を選び、仲間を引き連れて頂点を目指す。あなたの迫力は周囲を圧倒します。",
+    pokemon:"カイリュー、ガブリアス、レックウザ" },
+  { name:"あく",     cls:"tc-dark",     icon:"🌑", dt:false,
+    weights:[[3,+1,3],[4,-1,2],[1,+1,1]],
+    desc:"独自の論理と自由な戦略で相手の裏をかくタイプ。ルールより結果を重視し、冷静に最善手を打つ。あなたは誰よりも賢く、型にはまらない戦い方ができます。",
+    pokemon:"ゾロアーク、バンギラス、ヘルガー" },
+  { name:"はがね",   cls:"tc-steel",    icon:"⚙️", dt:true,
+    weights:[[3,-1,3],[1,+1,2],[4,+1,1]],
+    desc:"強固な防御力と冷静な判断力を兼ね備えたタイプ。感情に揺れず、論理と秩序で長期戦を制する。あなたの信頼感と堅牢さは最強の盾になります。",
+    pokemon:"ハガネール、エアームド、ジバコイル" },
+  { name:"フェアリー",cls:"tc-fairy",   icon:"🌸", dt:true,
+    weights:[[4,+1,3],[5,+1,2],[1,-1,1]],
+    desc:"温かさと秩序の中で周囲を守る、心のタイプ。みんなが笑顔でいられるよう調和を大切にし、感情で仲間を包む。あなたの優しさと安定感はチームになくてはならない存在です。",
+    pokemon:"トゲキッス、サーナイト、マリルリ" },
+];
+
+// ===== TYPE EFFECTIVENESS =====
+// superEffective[attacker] = types it hits super-effectively
+const superEffective = {
+  'ノーマル':  [],
+  'かくとう':  ['ノーマル','こおり','いわ','あく','はがね'],
+  'どく':      ['くさ','フェアリー'],
+  'じめん':    ['ほのお','でんき','どく','いわ','はがね'],
+  'ひこう':    ['くさ','かくとう','むし'],
+  'むし':      ['くさ','エスパー','あく'],
+  'いわ':      ['ほのお','こおり','ひこう','むし'],
+  'ゴースト':  ['エスパー','ゴースト'],
+  'はがね':    ['こおり','いわ','フェアリー'],
+  'ほのお':    ['くさ','こおり','むし','はがね'],
+  'みず':      ['ほのお','じめん','いわ'],
+  'でんき':    ['みず','ひこう'],
+  'くさ':      ['みず','じめん','いわ'],
+  'こおり':    ['くさ','じめん','ひこう','ドラゴン'],
+  'エスパー':  ['かくとう','どく'],
+  'ドラゴン':  ['ドラゴン'],
+  'あく':      ['エスパー','ゴースト'],
+  'フェアリー':['かくとう','ドラゴン','あく'],
+};
+
+// Build weakTo (reverse): weakTo[defender] = attackers that hit it super-effectively
+const weakTo = {};
+types.forEach(t => weakTo[t.name] = []);
+Object.entries(superEffective).forEach(([atk, defs]) => {
+  defs.forEach(def => { if(weakTo[def]) weakTo[def].push(atk); });
+});
+
+// Pre-compute all triangles: A→B→C→A
+const allTriangles = [];
+const typeNames = types.map(t=>t.name);
+for(let i=0;i<typeNames.length;i++){
+  for(let j=i+1;j<typeNames.length;j++){
+    for(let k=j+1;k<typeNames.length;k++){
+      const [a,b,c]=[typeNames[i],typeNames[j],typeNames[k]];
+      const pairs=[[a,b,c],[a,c,b]];
+      pairs.forEach(([x,y,z])=>{
+        if(superEffective[x].includes(y) && superEffective[y].includes(z) && superEffective[z].includes(x)){
+          allTriangles.push([x,y,z]);
+        }
+      });
+    }
+  }
+}
+
+const nameToCls = {}, nameDt = {};
+types.forEach(t => { nameToCls[t.name]=t.cls; nameDt[t.name]=t.dt; });
+
+let scores=[0,0,0,0,0,0], currentQ=0;
+// History: array of {axis, score} for each answered question
+let history=[];
+const posLbl=['外向的','論理的','現実的','攻撃的','秩序','安定'];
+const negLbl=['内向的','感情的','直感的','防御的','自由','変化'];
+
+function startQuiz(){
+  document.getElementById('titleScreen').classList.add('hidden');
+  document.getElementById('quizArea').classList.add('visible');
+  renderQuestion();
+}
+
+function renderQuestion(){
+  const q=questions[currentQ];
+  document.getElementById('questionNum').textContent=`しつもん ${currentQ+1}/${questions.length}`;
+  document.getElementById('progressBar').style.width=`${(currentQ/questions.length)*100}%`;
+  document.getElementById('questionText').textContent=q.text;
+
+  // Back button
+  const backBtn=document.getElementById('backBtn');
+  backBtn.disabled = (currentQ===0);
+
+  const panel=document.getElementById('choicePanel');
+  panel.innerHTML='';
+  [{text:q.choiceA,score:+1},{text:q.choiceB,score:-1}].forEach(opt=>{
+    const btn=document.createElement('button');
+    btn.className='choice-btn';
+    btn.innerHTML=`<span class="choice-cursor">▶</span>${opt.text}`;
+    btn.onclick=()=>{
+      // Save to history before advancing
+      history.push({axis:q.axis, score:opt.score});
+      scores[q.axis]+=opt.score;
+      currentQ++;
+      currentQ>=questions.length?showResult():renderQuestion();
+    };
+    panel.appendChild(btn);
+  });
+}
+
+function goBack(){
+  if(currentQ===0||history.length===0) return;
+  // Undo last answer
+  const last=history.pop();
+  scores[last.axis]-=last.score;
+  currentQ--;
+  renderQuestion();
+}
+
+function makeChip(name){
+  const chip=document.createElement('span');
+  chip.className='type-chip '+(nameToCls[name]||'');
+  if(nameDt[name]) chip.classList.add('dt');
+  chip.textContent=name;
+  return chip;
+}
+
+// Render one triangle as an inline SVG with chips at each vertex and arrows on edges
+function renderTriangleSVG(tri){
+  // tri = [A, B, C] where A→B→C→A
+  // Smaller canvas: W=180, H=152 with tighter vertex positions
+  const W=180, H=152;
+  // Equilateral triangle vertices - top=A, bottom-left=B, bottom-right=C
+  // Center at (90, 82), radius=56
+  const cx=90, cy=82, r=56;
+  const verts=[
+    {x: cx,                        y: cy - r},          // top
+    {x: cx - r*Math.sin(Math.PI*2/3), y: cy - r*Math.cos(Math.PI*2/3)}, // bottom-left
+    {x: cx + r*Math.sin(Math.PI*2/3), y: cy - r*Math.cos(Math.PI*2/3)}, // bottom-right
+  ];
+
+  const clsColorMap={
+    'tc-normal':'#9a9870','tc-fire':'#d06820','tc-water':'#4870e0',
+    'tc-electric':'#c8a800','tc-grass':'#508838','tc-ice':'#5898a8',
+    'tc-fighting':'#a02020','tc-poison':'#882888','tc-ground':'#b09048',
+    'tc-flying':'#7868c8','tc-psychic':'#c83870','tc-bug':'#789018',
+    'tc-rock':'#988828','tc-ghost':'#504878','tc-dragon':'#5018d8',
+    'tc-dark':'#484030','tc-steel':'#8888a0','tc-fairy':'#c87898',
+  };
+  const dtSet=new Set(['tc-electric','tc-ground','tc-steel','tc-fairy']);
+
+  const edges=[ {from:0,to:1}, {from:1,to:2}, {from:2,to:0} ];
+
+  // Chip half-width/height for padding calculation
+  const cw=48, ch=18, padPx=26;
+
+  let svg=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:4px auto;">
+  <defs>
+    <marker id="arr${tri.join('')}" markerWidth="7" markerHeight="7" refX="5" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L7,3 z" fill="#7a6040"/>
+    </marker>
+  </defs>`;
+
+  // Draw edges: shorten by padPx from each end for uniform gap
+  edges.forEach(({from,to})=>{
+    const fx=verts[from].x, fy=verts[from].y;
+    const tx=verts[to].x,   ty=verts[to].y;
+    const dx=tx-fx, dy=ty-fy;
+    const len=Math.sqrt(dx*dx+dy*dy);
+    const ux=dx/len, uy=dy/len;
+    const x1=fx+ux*padPx, y1=fy+uy*padPx;
+    const x2=tx-ux*padPx, y2=ty-uy*padPx;
+    svg+=`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"
+      stroke="#b0a070" stroke-width="1.5" marker-end="url(#arr${tri.join('')})"/>`;
+  });
+
+  // Draw type chips at each vertex
+  verts.forEach((v,i)=>{
+    const name=tri[i];
+    const cls=nameToCls[name]||'tc-normal';
+    const bg=clsColorMap[cls]||'#888';
+    const textCol=dtSet.has(cls)?'#333':'#fff';
+    svg+=`<rect x="${(v.x-cw/2).toFixed(1)}" y="${(v.y-ch/2).toFixed(1)}" width="${cw}" height="${ch}"
+      rx="3" fill="${bg}" stroke="rgba(0,0,0,0.18)" stroke-width="1"/>
+    <text x="${v.x.toFixed(1)}" y="${(v.y+5).toFixed(1)}" text-anchor="middle"
+      font-size="9" font-weight="800" fill="${textCol}" font-family="'M PLUS Rounded 1c',sans-serif">${name}</text>`;
+  });
+
+  svg+='</svg>';
+  return svg;
+}
+
+function showResult(){
+  document.getElementById('quizArea').classList.remove('visible');
+  document.getElementById('resultScreen').classList.add('visible');
+
+  let best=null,bestScore=-Infinity;
+  types.forEach(t=>{
+    let s=0;
+    t.weights.forEach(([ax,dir,pts])=>s+=scores[ax]*dir*pts);
+    if(s>bestScore){bestScore=s;best=t;}
+  });
+
+  document.getElementById('resultIcon').textContent=best.icon;
+  const badge=document.getElementById('resultBadge');
+  badge.textContent=best.name+'タイプ';
+  badge.className='result-badge '+best.cls;
+  badge.style.color=best.dt?'#222':'#fff';
+
+  document.getElementById('resultDesc').textContent=best.desc;
+  document.getElementById('resultPokemon').innerHTML=`<span>${best.pokemon}</span>`;
+
+  // ===== TYPE COMPATIBILITY =====
+  const compat=document.getElementById('compatBox');
+  compat.innerHTML='<div class="info-panel-title">タイプ相性</div>';
+  const myGood=superEffective[best.name]||[];
+  const myBad=weakTo[best.name]||[];
+  [
+    {label:'🟢 弱点をつける相手', list:myGood},
+    {label:'🔴 弱点をつかれる相手', list:myBad},
+  ].forEach(r=>{
+    const row=document.createElement('div');
+    row.className='compat-row';
+    const lbl=document.createElement('span');
+    lbl.className='compat-label';
+    lbl.textContent=r.label;
+    row.appendChild(lbl);
+    if(r.list.length===0){
+      const none=document.createElement('span');
+      none.style.cssText='font-size:11px;color:#888;font-weight:700;';
+      none.textContent='なし';
+      row.appendChild(none);
+    } else {
+      r.list.forEach(name=>row.appendChild(makeChip(name)));
+    }
+    compat.appendChild(row);
+  });
+
+  // ===== TRIANGLES =====
+  const myTriangles=allTriangles.filter(tri=>tri.includes(best.name));
+  const triBox=document.getElementById('triangleBox');
+  if(myTriangles.length>0){
+    triBox.innerHTML='<div class="info-panel-title">⚖️ 相性の良い仲間（三すくみ）</div>';
+    triBox.style.display='';
+    myTriangles.forEach(tri=>{
+      // Rotate so best.name is first (top vertex)
+      const idx=tri.indexOf(best.name);
+      const ordered=[tri[idx],tri[(idx+1)%3],tri[(idx+2)%3]];
+      const wrap=document.createElement('div');
+      wrap.className='triangle-wrap';
+      wrap.innerHTML=renderTriangleSVG(ordered);
+      triBox.appendChild(wrap);
+    });
+  } else {
+    triBox.style.display='none';
+  }
+
+  // ===== AXES =====
+  const table=document.getElementById('axesTable');
+  table.innerHTML='';
+  const maxS=3;
+  scores.forEach((val,i)=>{
+    const pct=Math.min(50,Math.abs(val)/maxS*50);
+    const row=document.createElement('div');
+    row.className='axis-row';
+    row.innerHTML=`
+      <div class="axis-lbl">${posLbl[i]}</div>
+      <div class="axis-track">
+        <div class="axis-mid"></div>
+        ${val>=0
+          ?`<div class="axis-fill-pos" style="width:${pct}%"></div>`
+          :`<div class="axis-fill-neg" style="width:${pct}%"></div>`}
+      </div>
+      <div class="axis-lbl-r">${negLbl[i]}</div>`;
+    table.appendChild(row);
+  });
+}
+
+function resetQuiz(){
+  scores=[0,0,0,0,0,0]; currentQ=0; history=[];
+  document.getElementById('resultScreen').classList.remove('visible');
+  document.getElementById('titleScreen').classList.remove('hidden');
+  document.getElementById('progressBar').style.width='0%';
+  document.getElementById('triangleBox').style.display='';
+}
+</script>
+</body>
+</html>
